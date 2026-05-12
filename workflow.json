@@ -1,0 +1,179 @@
+{
+  "name": "AI Text Processing Workflow",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "process-text",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "model": "gpt-3.5-turbo",
+        "temperature": 0.3,
+        "topP": 1,
+        "frequencyPenalty": 0,
+        "presencePenalty": 0,
+        "maxTokens": 400,
+        "messages": [
+          {
+            "role": "system",
+            "content": "You are an AI assistant. Summarize the following text in 2-4 sentences."
+          },
+          {
+            "role": "user",
+            "content": "{{$json[\"text\"]}}"
+          }
+        ]
+      },
+      "name": "AI Summary",
+      "type": "n8n-nodes-base.openAI",
+      "typeVersion": 1,
+      "position": [560, 120]
+    },
+    {
+      "parameters": {
+        "model": "gpt-3.5-turbo",
+        "temperature": 0.3,
+        "topP": 1,
+        "frequencyPenalty": 0,
+        "presencePenalty": 0,
+        "maxTokens": 400,
+        "messages": [
+          {
+            "role": "system",
+            "content": "Extract exactly 3 key points from the following text. Return them as a numbered list."
+          },
+          {
+            "role": "user",
+            "content": "{{$json[\"text\"]}}"
+          }
+        ]
+      },
+      "name": "Key Points",
+      "type": "n8n-nodes-base.openAI",
+      "typeVersion": 1,
+      "position": [560, 320]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "session_id",
+              "value": "{{$json[\"session_id\"]}}"
+            },
+            {
+              "name": "email",
+              "value": "{{$json[\"email\"]}}"
+            },
+            {
+              "name": "text",
+              "value": "{{$json[\"text\"]}}"
+            },
+            {
+              "name": "summary",
+              "value": "{{$node[\"AI Summary\"].json[\"choices\"][0][\"message\"][\"content\"]}}"
+            },
+            {
+              "name": "key_points",
+              "value": "{{$node[\"Key Points\"].json[\"choices\"][0][\"message\"][\"content\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Prepare Row",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [780, 220]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "sheetId": "",
+        "sheetName": "Sheet1",
+        "range": "A:E",
+        "valueInputMode": "RAW",
+        "options": {}
+      },
+      "name": "Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 1,
+      "position": [1010, 220]
+    },
+    {
+      "parameters": {
+        "fromEmail": "{{ $json[\"email\"] }}",
+        "toEmail": "={{$json[\"email\"]}}",
+        "subject": "Your AI Summary is Ready",
+        "text": "Hi,\n\nHere is your AI-generated summary:\n{{ $node[\"AI Summary\"].json[\"choices\"][0][\"message\"][\"content\"] }}\n\nKey Points:\n{{ $node[\"Key Points\"].json[\"choices\"][0][\"message\"][\"content\"] }}\n\nSession ID: {{ $json[\"session_id\"] }}",
+        "options": {}
+      },
+      "name": "Send Email",
+      "type": "n8n-nodes-base.sendEmail",
+      "typeVersion": 1,
+      "position": [1010, 420]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Summary": {
+      "main": [
+        [
+          {
+            "node": "Key Points",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Key Points": {
+      "main": [
+        [
+          {
+            "node": "Prepare Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Row": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
