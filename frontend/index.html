@@ -1,1 +1,37 @@
+<!-- frontend/index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AI Text Processor</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 60px auto; padding: 0 20px; }
+    input, textarea { width: 100%; padding: 10px; margin: 8px 0 16px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; }
+    button { background: #4f46e5; color: white; border: none; padding: 12px 28px; border-radius: 6px; cursor: pointer; font-size: 15px; }
+    #status { margin-top: 16px; color: green; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <h2>AI Text Processor</h2>
+  <label>Email</label>
+  <input type="email" id="email" placeholder="student@example.com"/>
+  <label>Text</label>
+  <textarea id="text" rows="6" placeholder="Paste your text here..."></textarea>
+  <button onclick="submit()">Process</button>
+  <p id="status"></p>
 
+  <script>
+    async function submit() {
+      const email = document.getElementById('email').value;
+      const text = document.getElementById('text').value;
+      document.getElementById('status').textContent = 'Processing...';
+      const res = await fetch('http://localhost:8000/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, text })
+      });
+      const data = await res.json();
+      document.getElementById('status').textContent = '✅ Done! Session: ' + data.session_id;
+    }
+  </script>
+</body>
+</html>
